@@ -20,7 +20,7 @@ def parse_args():
 
 def run_experiment(capec_pool, cpe_pool, base_network, reward_fn, args=None):
     args = parse_args() if args is None else args
-    results = []
+    histories = []
     for i in range(args.n_runs):
         seed = args.seed + i
         _, _, history = run_cca(
@@ -36,25 +36,8 @@ def run_experiment(capec_pool, cpe_pool, base_network, reward_fn, args=None):
             reward_fn=reward_fn,
             seed=seed,
         )
-        history["seed"] = seed
-        history["config"] = {
-            "n_generations": args.n_generations,
-            "population_size": args.population_size,
-            "mutation_probability": args.mutation_probability,
-            "crossover_probability": args.crossover_probability,
-            "elite_size": args.elite_size,
-            "tournament_size": args.tournament_size,
-        }
-        history["pools"] = {
-            "capecs": list(capec_pool),
-            "cpes": list(cpe_pool),
-        }
-        history["base_network"] = {
-            "size": len(base_network),
-            "total_weight": float(sum(base_network.values())),
-        }
-        results.append(history)
-    return results
+        histories.append(history)
+    return histories
 
 
 if __name__ == "__main__":

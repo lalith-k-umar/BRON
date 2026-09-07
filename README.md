@@ -90,6 +90,28 @@ This should produce a `build_bron.log` file that ends with `END building BRON`.
 ## Tutorials
 Tutorials are available in the `tutorials` folder 
 
+## Competitive coevolution results
+
+After BRON is populated, run `bron_cca/coevol.py` to execute the competitive
+coevolution experiment. Set `CCA_OUTPUT_DIR` to choose where its artifacts are
+written:
+
+```bash
+CCA_OUTPUT_DIR=cca_output python bron_cca/coevol.py
+```
+
+The experiment writes `cca_results.json`, `cca_dashboard.html`, and
+`cca_reward.png`. Open the HTML file locally to compare runs, inspect reward
+and diversity diagnostics, and review the decoded final CAPEC and CPE
+strategies. The dashboard is intended to work offline after Plotly is
+installed from `requirements.txt`.
+
+The attacker and defender reward measurements are intentionally labeled with
+their timing: attacker fitness is measured before attacker evolution, while
+defender fitness is measured after attacker evolution and before defender
+evolution. Their sum is therefore an asynchronous diagnostic, not a single
+synchronized zero-sum payoff.
+
 
 ## Usage
 ```

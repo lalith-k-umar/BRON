@@ -1,4 +1,5 @@
 import random
+from typing import Callable, List, Sequence, Tuple
 
 import numpy as np
 
@@ -38,25 +39,6 @@ def mean_reward_of_population(attacker_pop, defender_pop, capec_pool, cpe_pool, 
     return attacker_rewards
 
 
-def _population_records(population, pool):
-    return [
-        {
-            "genes": list(genome.genes),
-            "actions": list(genome.decode(pool)),
-        }
-        for genome in population
-    ]
-
-
-def _fitness_summary(fitnesses):
-    values = [float(value) for value in fitnesses]
-    return {
-        "mean": float(np.mean(values)),
-        "best": float(np.max(values)),
-        "worst": float(np.min(values)),
-    }
-
-
 def run_cca(
     n_generations,
     pop_size,
@@ -74,15 +56,7 @@ def run_cca(
     attacker_pop = [Genome(len(capec_pool)) for _ in range(pop_size)]
     defender_pop = [Genome(len(cpe_pool)) for _ in range(pop_size)]
 
-    history = {
-        "attacker_reward": [],
-        "defender_reward": [],
-        "generation_metrics": [],
-        "evaluation_timing": {
-            "attacker": "before_attacker_evolution",
-            "defender": "after_attacker_evolution_before_defender_evolution",
-        },
-    }
+    history = {"attacker_reward": [], "defender_reward": []}
 
     for gen in range(n_generations):
         atk_fitness = mean_reward_of_population(
@@ -102,31 +76,11 @@ def run_cca(
             defender_pop, def_fitness, p_mut, p_cx, elite_size, tourn_size
         )
 
-        attacker_summary = _fitness_summary(atk_fitness)
-        defender_summary = _fitness_summary(def_fitness)
-        history["attacker_reward"].append(attacker_summary["mean"])
-        history["defender_reward"].append(defender_summary["mean"])
-        history["generation_metrics"].append(
-            {
-                "generation": gen,
-                "attacker": attacker_summary,
-                "defender": defender_summary,
-                "asynchronous_zero_sum_residual": (
-                    attacker_summary["mean"] + defender_summary["mean"]
-                ),
-                "attacker_unique_actions": len(
-                    {action for genome in attacker_pop for action in genome.decode(capec_pool)}
-                ),
-                "defender_unique_actions": len(
-                    {action for genome in defender_pop for action in genome.decode(cpe_pool)}
-                ),
-            }
-        )
+        history["attacker_reward"].append(np.mean(atk_fitness))
+        history["defender_reward"].append(np.mean(def_fitness))
         print(
-            f"Gen {gen:3d} | mean attacker reward: {attacker_summary['mean']:.3f}",
+            f"Gen {gen:3d} | mean attacker reward: {np.mean(atk_fitness):.3f}",
             flush=True,
         )
 
-    history["final_attacker_population"] = _population_records(attacker_pop, capec_pool)
-    history["final_defender_population"] = _population_records(defender_pop, cpe_pool)
     return attacker_pop, defender_pop, history

@@ -57,5 +57,30 @@ def run_experiment(capec_pool, cpe_pool, base_network, reward_fn, args=None):
     return results
 
 
+def find_and_display_best_capec_artifacts(
+    capec_pool,
+    network,
+    reward_fn,
+    db=None,
+    network_cpes=None,
+):
+    """Convenience helper to find highest rewarding CAPEC and display its linked CVE, CWE, and D3FEND."""
+    from .bron_client import (
+        display_capec_linked_artifacts,
+        find_highest_rewarding_capec,
+        get_capec_linked_artifacts,
+    )
+
+    best_capec, best_reward = find_highest_rewarding_capec(capec_pool, network, reward_fn)
+    print(f"best CAPEC: {best_capec} (reward: {best_reward:.3f})", flush=True)
+    if db is not None:
+        cpes = network_cpes if network_cpes is not None else list(network.keys())
+        linked = get_capec_linked_artifacts(db, best_capec, network_cpes=cpes)
+        display_capec_linked_artifacts(best_capec, linked, reward=best_reward)
+        return best_capec, best_reward, linked
+    return best_capec, best_reward, None
+
+
 if __name__ == "__main__":
     raise SystemExit("Use run_experiment.run_experiment() from Python rather than executing this directly.")
+

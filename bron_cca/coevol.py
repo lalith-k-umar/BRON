@@ -8,8 +8,11 @@ from arango import ArangoClient
 from bron_cca.config import CCA_CONFIG
 from bron_cca.bron_client import (
     build_capec_cache,
+    display_capec_linked_artifacts,
     evaluate_attack_cached,
+    find_highest_rewarding_capec,
     get_all_capecs,
+    get_capec_linked_artifacts,
     sample_reachable_cpes,
 )
 from bron_cca.coevolution import run_cca
@@ -82,22 +85,7 @@ final_attackers = []
 for result in results:
     final_attackers.extend(result["final_attacker_population"])
 
-output_dir = Path(os.environ.get("CCA_OUTPUT_DIR", "."))
-output_dir.mkdir(parents=True, exist_ok=True)
-results_path = output_dir / "cca_results.json"
-results_path.write_text(json.dumps({"runs": results}, indent=2), encoding="utf-8")
-dashboard_path = output_dir / "cca_dashboard.html"
-write_dashboard(results, dashboard_path)
-print(f"saved {results_path} and {dashboard_path}", flush=True)
-
-plot_reward_curve(all_histories, out_path=output_dir / "cca_reward.png")
-print(f"saved {output_dir / 'cca_reward.png'}", flush=True)
-
-best_capec = max(
-    capecs,
-    key=lambda capec_id: reward_fn([capec_id], network),
-)
-best_capec_reward = reward_fn([best_capec], network)
+best_capec, best_capec_reward = find_highest_rewarding_capec(capecs, network, reward_fn)
 
 final_attack_capec_ids = [attacker["actions"] for attacker in final_attackers]
 best_cpe = min(
@@ -119,3 +107,31 @@ print(
     f"(mean remaining reward: {best_cpe_reward:.3f})",
     flush=True,
 )
+
+print("\nfetching linked CVE, CWE, and D3FEND for best CAPEC...", flush=True)
+linked_artifacts = get_capec_linked_artifacts(db, best_capec, network_cpes=cpes)
+display_capec_linked_artifacts(best_capec, linked_artifacts, reward=best_capec_reward)
+
+output_dir = Path(os.environ.get("CCA_OUTPUT_DIR", "."))
+output_dir.mkdir(parents=True, exist_ok=True)
+results_path = output_dir / "cca_results.json"
+results_payload = {
+    "runs": results,
+    "highest_rewarding_capec": {
+        "id": best_capec,
+        "reward": float(best_capec_reward),
+        "linked_artifacts": linked_artifacts,
+    },
+    "best_cpe_patch": {
+        "id": best_cpe,
+        "mean_remaining_reward": float(best_cpe_reward),
+    },
+}
+results_path.write_text(json.dumps(results_payload, indent=2), encoding="utf-8")
+dashboard_path = output_dir / "cca_dashboard.html"
+write_dashboard(results_payload, dashboard_path)
+print(f"saved {results_path} and {dashboard_path}", flush=True)
+
+plot_reward_curve(all_histories, out_path=output_dir / "cca_reward.png")
+print(f"saved {output_dir / 'cca_reward.png'}", flush=True)
+
